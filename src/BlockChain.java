@@ -1,5 +1,3 @@
-package Main;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Scanner;
@@ -91,30 +89,42 @@ class User {
 
     public void promoteUser(ArrayList<Level> levels) {
 
+        this.introducedPeopleCount = 0;
         if (this.levelNumber < 2) {
             return;
+        }
+
+        if (levels.get(this.levelNumber-1).hasCapacity()){
+            System.out.println("salam");
+            this.levelNumber--;
+            this.position = levels.get(levelNumber).getPeopleCount();
+            levels.get(levelNumber).getUsers().add(this);
+            levels.get(levelNumber+1).getUsers().remove(this);
+            return;
+
         }
 
         Comparator<User> comparator = Comparator.comparing(User::getIntroducedPeopleCount).thenComparing(User::getDeposit);
         ArrayList<User> sortedUsers = new ArrayList<>(levels.get(levelNumber - 1).getUsers());
         sortedUsers.sort(comparator);
-        User miserableUser = sortedUsers.get(0);
+
+        User miserableUser = sortedUsers.get(sortedUsers.size()-1);
 
         this.introducedPeopleCount = 0;
         miserableUser.setIntroducedPeopleCount(0);
-
-        int position = miserableUser.getPosition();
-        miserableUser.setPosition(this.position);
-        this.position = position;
-
-        miserableUser.setLevelNumber(levelNumber);
-        this.levelNumber--;
+        
+        levels.get(levelNumber - 1).getUsers().add(this);
+        levels.get(levelNumber).getUsers().add(miserableUser);
 
         levels.get(levelNumber - 1).getUsers().remove(miserableUser);
         levels.get(levelNumber).getUsers().remove(this);
 
-        levels.get(levelNumber - 1).getUsers().add(this);
-        levels.get(levelNumber).getUsers().add(miserableUser);
+        levels.get(levelNumber - 1).updatePositions();
+        levels.get(levelNumber).updatePositions();
+        
+        miserableUser.setLevelNumber(levelNumber);
+        this.levelNumber--;
+        
     }
 
     @Override
@@ -143,10 +153,15 @@ class Level {
     public int getNumber() {
         return number;
     }
-
     public boolean hasCapacity() {
         return this.capacity - this.users.size() > 0;
     }
+    public void updatePositions() {
+        for (int i = 0; i < users.size(); i++) {
+            users.get(i).setPosition(i);
+        }
+    }
+
 }
 
 class Mahdiz {
@@ -213,8 +228,10 @@ class FinancialCircle {
 
         Level level = new Level(-1);
         for (int i = oldUser.getLevelNumber() + 1; i < levels.size(); i++) {
-            if (levels.get(i).hasCapacity())
+            if (levels.get(i).hasCapacity()){
                 level = levels.get(i);
+                break;
+            }
         }
 
         if (level.getNumber() == -1){
@@ -239,6 +256,7 @@ class FinancialCircle {
 
         return "User added successfully in level " + level.getNumber();
     }
+
 }
 
 class Controller {
@@ -253,6 +271,7 @@ class Controller {
         }
         return null;
     }
+
     public String createTable(String username, int deposit) {
         if (financialCircle.getFounder() != null)
             return "We already have a founder";
@@ -268,6 +287,7 @@ class Controller {
 
         return "You now own a table";
     }
+
     public String joinIndependent(String username, int deposit) {
         if (getUserByName(username) != null)
             return "Username already taken";
@@ -275,6 +295,7 @@ class Controller {
 
         return financialCircle.joinRequest(username, deposit);
     }
+
     public String joinWithInvitation(String oldUsername, String newUsername, int deposit) {
         User oldUser;
 
@@ -286,6 +307,7 @@ class Controller {
 
         return (financialCircle.invitePeople(newUsername, oldUser, deposit));
     }
+
     public int getNumberOfUsers() {
         int count = 0;
         for (Level level : financialCircle.getLevels()) {
@@ -294,15 +316,18 @@ class Controller {
 
         return count;
     }
+
     public int getNumberOfLevels() {
         return financialCircle.getLevels().size();
     }
+
     public ArrayList<User> getUsersInSameLevelList(User user){
         ArrayList<User> users = new ArrayList<>(financialCircle.getLevels().get(user.getLevelNumber()).getUsers());
         users.remove(user);
 
         return users;
     }
+
     public String getUsersInSameLevel(String username){
         User user = getUserByName(username);
 
@@ -323,15 +348,18 @@ class Controller {
         return output.substring(0,output.length()-1);
 
     }
+
     public String getUsersInLevel(int levelNumber) {
         if (levelNumber > financialCircle.getLevels().size()-1 || financialCircle.getLevels().get(levelNumber) == null)
             return "No_such_level_found";
 
         return String.valueOf(financialCircle.getLevels().get(levelNumber).getUsers().size());
     }
+
     public int getMahdizDeposit() {
         return financialCircle.getMahdiz().getDeposit();
     }
+
     public String getFriends(String username) {
         User targetUser = getUserByName(username);
 
@@ -349,8 +377,10 @@ class Controller {
             output.append(userFriend).append(" ");
         }
 
-        return output.substring(0,output.length()-1);
+//        return output.substring(0,output.length()-1);
+        return output.toString();
     }
+
     public ArrayList<User> getUserFriends(User targetUser){
         ArrayList<User> userFriends = new ArrayList<>();
         Level level = financialCircle.getLevels().get(targetUser.getLevelNumber());
@@ -367,6 +397,7 @@ class Controller {
         userFriends.add(level.getUsers().get( (targetUser.getPosition()+1) % level.getUsers().size()));
         return userFriends;
     }
+
     public String getUserIntroducer(String username) {
         User user = getUserByName(username);
 
@@ -377,6 +408,7 @@ class Controller {
 
         return user.getIntroducer().getUsername();
     }
+
     public String getUserDeposit(String username) {
         User user = getUserByName(username);
         if (user == null)
@@ -384,6 +416,7 @@ class Controller {
 
         return String.valueOf(user.getDeposit());
     }
+
     public void printAllLevels() {
         for (Level level : financialCircle.getLevels()) {
             for (User user : level.getUsers()) {
@@ -442,7 +475,8 @@ class Menu {
                 break;
 
             } else {
-                throw new RuntimeException();
+                controller.printAllLevels();
+//                throw new RuntimeException();
 
             }
         }
