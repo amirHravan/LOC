@@ -1,0 +1,33 @@
+Create_a_table_for 1 with_deposit_of 6000
+Invitation_request_from 1 for A with_deposit_of 2000
+Invitation_request_from 1 for B with_deposit_of 2000
+Invitation_request_from 1 for C with_deposit_of 2000
+Invitation_request_from 1 for D with_deposit_of 2000
+Invitation_request_from 1 for E with_deposit_of 2000
+Invitation_request_from 1 for F with_deposit_of 2000
+Invitation_request_from 1 for G with_deposit_of 2000
+Join_request_for 1 with_deposit_of 5000
+Join_request_for 2 with_deposit_of 5000
+Join_request_for 3 with_deposit_of 5000
+Join_request_for 4 with_deposit_of 5000
+Join_request_for 5 with_deposit_of 5000
+Join_request_for 6 with_deposit_of 5000
+Join_request_for 7 with_deposit_of 5000
+Friends_of A
+Friends_of B
+Friends_of C
+Friends_of D
+Friends_of E
+Friends_of F
+Friends_of G
+Friends_of H
+Friends_of K
+Users_on_the_same_level_with A
+Users_on_the_same_level_with B
+Users_on_the_same_level_with C
+Users_on_the_same_level_with D
+Users_on_the_same_level_with E
+Users_on_the_same_level_with F
+Users_on_the_same_level_with G
+Users_on_the_same_level_with H
+Users_on_the_same_level_with K

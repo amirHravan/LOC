@@ -1,3 +1,5 @@
+package Main;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Scanner;
@@ -12,7 +14,7 @@ enum Regexes {
     JOIN_INDEPENDENT("Join_request_for (?<username>\\S+) with_deposit_of (?<money>\\d+)"),
     NUMBER_OF_LEVELS("Number_of_levels"),
     NUMBER_OF_USERS("Number_of_users"),
-    NUMBER_OF_USERS_IN_LEVEL("Number_of_users_level (?<level>\\d+)"),
+    NUMBER_OF_USERS_IN_LEVEL("Number_of_users_in_level (?<level>\\d+)"),
     USER_INTRODUCER("Introducer_of (?<username>\\S+)"),
     USER_FRIENDS("Friends_of (?<username>\\S+)"),
     USER_CREDITS("Credit_of (?<username>\\S+)"),
@@ -32,7 +34,7 @@ enum Regexes {
 
 class User {
     private final User introducer;
-    private String username;
+    private final String username;
     private int deposit;
     private int position;
     private int levelNumber;
@@ -71,10 +73,6 @@ class User {
         return username;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
     public int getLevelNumber() {
         return levelNumber;
     }
@@ -91,11 +89,12 @@ class User {
         this.deposit = deposit;
     }
 
-    public boolean isFriend(User user, int peopleInLLevel) {
-        return this.getPosition() == (user.getPosition() + 1) % peopleInLLevel || this.getPosition() == (user.getPosition() + peopleInLLevel - 1) % peopleInLLevel;
-    }
+    public void promoteUser(ArrayList<Level> levels) {
 
-    public void sendUserHigher(ArrayList<Level> levels) {
+        if (this.levelNumber < 2) {
+            return;
+        }
+
         Comparator<User> comparator = Comparator.comparing(User::getIntroducedPeopleCount).thenComparing(User::getDeposit);
         ArrayList<User> sortedUsers = new ArrayList<>(levels.get(levelNumber - 1).getUsers());
         sortedUsers.sort(comparator);
@@ -116,14 +115,18 @@ class User {
 
         levels.get(levelNumber - 1).getUsers().add(this);
         levels.get(levelNumber).getUsers().add(miserableUser);
+    }
 
+    @Override
+    public String toString() {
+        return this.username;
     }
 }
 
 class Level {
     private final ArrayList<User> users;
-    private int number;
-    private int capacity;
+    private final int number;
+    private final int capacity;
 
     public Level(int number) {
         this.users = new ArrayList<>();
@@ -131,33 +134,18 @@ class Level {
         this.capacity = (int) Math.pow(number, 2);
     }
 
-
     public ArrayList<User> getUsers() {
         return users;
     }
-
     public int getPeopleCount() {
         return this.users.size();
     }
-
     public int getNumber() {
         return number;
     }
 
-    public void setNumber(int number) {
-        this.number = number;
-    }
-
     public boolean hasCapacity() {
         return this.capacity - this.users.size() > 0;
-    }
-
-    public int getCapacity() {
-        return capacity;
-    }
-
-    public void setCapacity(int capacity) {
-        this.capacity = capacity;
     }
 }
 
@@ -175,8 +163,7 @@ class Mahdiz {
 
 class FinancialCircle {
     private final ArrayList<Level> levels;
-    private Mahdiz mahdiz;
-
+    private final Mahdiz mahdiz;
     private User founder;
 
     public FinancialCircle() {
@@ -201,25 +188,21 @@ class FinancialCircle {
         return mahdiz;
     }
 
-    public void setMahdiz(Mahdiz mahdiz) {
-        this.mahdiz = mahdiz;
-    }
-
-
-    public void addNewLevel() {
+    public Level addNewLevel() {
         Level level = new Level(levels.size());
         levels.add(level);
+        return level;
     }
 
     public String joinRequest(String username, int deposit) {
-        Level level = new Level(levels.size());
+        Level level = addNewLevel();
         level.getUsers().add(new User(null, username, level.getNumber(), (int) (deposit * 0.15), 0));
         founder.setDeposit((int) (founder.getDeposit() + deposit * 0.1));
         mahdiz.setDeposit((int) (mahdiz.getDeposit() + deposit * 0.25));
 
-        for (int i = 1; i < level.getNumber(); i++) {
+        for (int i = 0; i < level.getNumber(); i++) {
             for (User user : levels.get(i).getUsers()) {
-                user.setDeposit((int) (user.getDeposit() + (deposit / ((level.getNumber() - 1) * (level.getPeopleCount())))));
+                user.setDeposit((int) (user.getDeposit() + ((deposit*0.5) / (level.getNumber() * level.getPeopleCount()))));
             }
         }
         return "User added successfully in level " + level.getNumber();
@@ -227,14 +210,15 @@ class FinancialCircle {
 
     public String invitePeople(String username, User oldUser, int deposit) {
         oldUser.setIntroducedPeopleCount(oldUser.getIntroducedPeopleCount() + 1);
+
         Level level = new Level(-1);
         for (int i = oldUser.getLevelNumber() + 1; i < levels.size(); i++) {
             if (levels.get(i).hasCapacity())
                 level = levels.get(i);
         }
+
         if (level.getNumber() == -1){
-            level = new Level(levels.size());
-            levels.add(level);
+            level = addNewLevel();
         }
 
         User newUser = new User(oldUser, username, level.getNumber(), (int) (deposit * 0.2), level.getPeopleCount());
@@ -244,14 +228,14 @@ class FinancialCircle {
         founder.setDeposit((int) (founder.getDeposit() + deposit * 0.1));
         level.getUsers().add(newUser);
 
-        for (int i = 1; i < oldUser.getLevelNumber(); i++) {
+        for (int i = 0; i < level.getNumber(); i++) {
             for (User user : levels.get(i).getUsers()) {
-                user.setDeposit((int) (user.getDeposit() + (deposit / ((level.getNumber() - 1) * (level.getPeopleCount())))));
+                user.setDeposit((int) (user.getDeposit() + ((deposit*0.5) / (level.getNumber() * level.getPeopleCount()))));
             }
         }
 
-        if (oldUser.getIntroducedPeopleCount() > 5)
-            oldUser.sendUserHigher(levels);
+        if (oldUser.getIntroducedPeopleCount() >= 5)
+            oldUser.promoteUser(levels);
 
         return "User added successfully in level " + level.getNumber();
     }
@@ -269,8 +253,6 @@ class Controller {
         }
         return null;
     }
-
-
     public String createTable(String username, int deposit) {
         if (financialCircle.getFounder() != null)
             return "We already have a founder";
@@ -282,10 +264,10 @@ class Controller {
         financialCircle.addNewLevel();
         financialCircle.getLevels().get(0).getUsers().add(user);
         financialCircle.setFounder(user);
+        financialCircle.getMahdiz().setDeposit(financialCircle.getMahdiz().getDeposit() + 5000);
 
         return "You now own a table";
     }
-
     public String joinIndependent(String username, int deposit) {
         if (getUserByName(username) != null)
             return "Username already taken";
@@ -293,8 +275,6 @@ class Controller {
 
         return financialCircle.joinRequest(username, deposit);
     }
-
-
     public String joinWithInvitation(String oldUsername, String newUsername, int deposit) {
         User oldUser;
 
@@ -306,7 +286,6 @@ class Controller {
 
         return (financialCircle.invitePeople(newUsername, oldUser, deposit));
     }
-
     public int getNumberOfUsers() {
         int count = 0;
         for (Level level : financialCircle.getLevels()) {
@@ -315,35 +294,79 @@ class Controller {
 
         return count;
     }
-
     public int getNumberOfLevels() {
         return financialCircle.getLevels().size();
     }
+    public ArrayList<User> getUsersInSameLevelList(User user){
+        ArrayList<User> users = new ArrayList<>(financialCircle.getLevels().get(user.getLevelNumber()).getUsers());
+        users.remove(user);
 
-    public ArrayList<User> getUsersInSameLevel(int levelNumber) {
-        return financialCircle.getLevels().get(levelNumber).getUsers();
+        return users;
     }
+    public String getUsersInSameLevel(String username){
+        User user = getUserByName(username);
 
+        if (user == null) {
+            return ("No_such_user_found");
+        }
+        ArrayList<User> userList = getUsersInSameLevelList(user);
+
+        if (userList.size() == 0) {
+            return ("He_is_all_by_himself");
+        }
+        StringBuilder output = new StringBuilder();
+
+        for (User guy : userList) {
+            output.append(guy).append(" ");
+        }
+
+        return output.substring(0,output.length()-1);
+
+    }
+    public String getUsersInLevel(int levelNumber) {
+        if (levelNumber > financialCircle.getLevels().size()-1 || financialCircle.getLevels().get(levelNumber) == null)
+            return "No_such_level_found";
+
+        return String.valueOf(financialCircle.getLevels().get(levelNumber).getUsers().size());
+    }
     public int getMahdizDeposit() {
         return financialCircle.getMahdiz().getDeposit();
     }
-
-    public ArrayList<User> getUserFriends(String username) {
+    public String getFriends(String username) {
         User targetUser = getUserByName(username);
 
-        ArrayList<User> userFriends = new ArrayList<>();
+        if (targetUser == null){
+            return ("No_such_user_found");
+        }
+        ArrayList<User> userFriends = getUserFriends(targetUser);
 
-        if (targetUser == null)
-            return null;
+        if (userFriends.size() == 0){
+            return ("No_friend");
+        }
+        StringBuilder output = new StringBuilder();
 
-        for (User user : financialCircle.getLevels().get(targetUser.getLevelNumber()).getUsers()) {
-            if (targetUser.isFriend(user, financialCircle.getLevels().get(targetUser.getLevelNumber()).getPeopleCount()))
-                userFriends.add(user);
+        for (User userFriend : userFriends) {
+            output.append(userFriend).append(" ");
         }
 
+        return output.substring(0,output.length()-1);
+    }
+    public ArrayList<User> getUserFriends(User targetUser){
+        ArrayList<User> userFriends = new ArrayList<>();
+        Level level = financialCircle.getLevels().get(targetUser.getLevelNumber());
+
+        if (level.getUsers().size() == 1)
+            return userFriends;
+
+        userFriends.add(level.getUsers().get( (targetUser.getPosition() -1 + level.getUsers().size()) % level.getUsers().size()));
+
+        if (level.getUsers().size() == 2) {
+            return userFriends;
+        }
+
+        userFriends.add(level.getUsers().get( (targetUser.getPosition()+1) % level.getUsers().size()));
         return userFriends;
     }
-
     public String getUserIntroducer(String username) {
         User user = getUserByName(username);
 
@@ -354,7 +377,6 @@ class Controller {
 
         return user.getIntroducer().getUsername();
     }
-
     public String getUserDeposit(String username) {
         User user = getUserByName(username);
         if (user == null)
@@ -362,18 +384,26 @@ class Controller {
 
         return String.valueOf(user.getDeposit());
     }
+    public void printAllLevels() {
+        for (Level level : financialCircle.getLevels()) {
+            for (User user : level.getUsers()) {
+                System.out.print(user + " ");
+            }
+            System.out.println();
+        }
+    }
 }
 
 class Menu {
     public void run() {
         Controller controller = new Controller();
-
         String input;
         Scanner scanner = new Scanner(System.in);
         Matcher matcher;
 
         while (true) {
             input = scanner.nextLine();
+
 
             if ((matcher = Regexes.getMatcher(input, Regexes.CREATE_TABLE)).matches()) {
                 System.out.println(controller.createTable(matcher.group(1), Integer.parseInt(matcher.group(2))));
@@ -384,62 +414,26 @@ class Menu {
             } else if ((matcher = Regexes.getMatcher(input, Regexes.JOIN_WITH_INVITATION)).matches()) {
                 System.out.println(controller.joinWithInvitation(matcher.group(1), matcher.group(2), Integer.parseInt(matcher.group(3))));
 
-            } else if ((matcher = Regexes.getMatcher(input, Regexes.NUMBER_OF_USERS)).matches()) {
+            } else if (Regexes.getMatcher(input, Regexes.NUMBER_OF_USERS).matches()) {
                 System.out.println(controller.getNumberOfUsers());
 
-            } else if ((matcher = Regexes.getMatcher(input, Regexes.NUMBER_OF_LEVELS)).matches()) {
+            } else if (Regexes.getMatcher(input, Regexes.NUMBER_OF_LEVELS).matches()) {
                 System.out.println(controller.getNumberOfLevels());
 
             } else if ((matcher = Regexes.getMatcher(input, Regexes.USER_CREDITS)).matches()) {
                 System.out.println(controller.getUserDeposit(matcher.group(1)));
 
             } else if ((matcher = Regexes.getMatcher(input, Regexes.NUMBER_OF_USERS_IN_LEVEL)).matches()) {
-                if (controller.getUsersInSameLevel(Integer.parseInt(matcher.group(1))) == null)
-                    System.out.println("No_such_level_found");
+                System.out.println(controller.getUsersInLevel(Integer.parseInt(matcher.group(1))));
 
-                System.out.println(controller.getUsersInSameLevel(Integer.parseInt(matcher.group(1))).size());
-
-            } else if ((matcher = Regexes.getMatcher(input, Regexes.PROFIT_UNTIL_NOW)).matches()) {
+            } else if (Regexes.getMatcher(input, Regexes.PROFIT_UNTIL_NOW).matches()) {
                 System.out.println(controller.getMahdizDeposit());
 
             } else if ((matcher = Regexes.getMatcher(input, Regexes.SAME_LEVEL_USERS)).matches()) {
-                int levelNumber = Integer.parseInt(matcher.group(1));
-
-                if (controller.getUsersInSameLevel(levelNumber) == null) {
-                    System.out.println("No_such_user_found");
-                    continue;
-                }
-
-                if (controller.getUsersInSameLevel(levelNumber).size() == 1) {
-                    System.out.println("He_is_all_by_himself");
-                    continue;
-                }
-
-                for (User user : controller.getUsersInSameLevel(levelNumber)) {
-                    //fixme string with spare " ";
-
-                    System.out.print(user + " ");
-                }
-                System.out.println();
-
+                System.out.println(controller.getUsersInSameLevel(matcher.group(1)));
 
             } else if ((matcher = Regexes.getMatcher(input, Regexes.USER_FRIENDS)).matches()) {
-                if (controller.getUserFriends(matcher.group(1)) == null){
-                    System.out.println("No_such_user_found");
-                    continue;
-                }
-
-                if (controller.getUserFriends(matcher.group(1)).size() == 1){
-                    System.out.println("No_friend");
-                    continue;
-                }
-
-                for (User userFriend : controller.getUserFriends(matcher.group(1))) {
-                    //fixme string with spare " ";
-
-                    System.out.print(userFriend + " ");
-                }
-                System.out.println();
+                System.out.println(controller.getFriends(matcher.group(1)));
 
             } else if ((matcher = Regexes.getMatcher(input, Regexes.USER_INTRODUCER)).matches()) {
                 System.out.println(controller.getUserIntroducer(matcher.group(1)));
@@ -448,7 +442,7 @@ class Menu {
                 break;
 
             } else {
-                System.out.println("invalid command!");
+                throw new RuntimeException();
 
             }
         }
