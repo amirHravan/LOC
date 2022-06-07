@@ -95,7 +95,6 @@ class User {
         }
 
         if (levels.get(this.levelNumber-1).hasCapacity()){
-            System.out.println("salam");
             this.levelNumber--;
             this.position = levels.get(levelNumber).getPeopleCount();
             levels.get(levelNumber).getUsers().add(this);
